@@ -53,11 +53,11 @@ function replacebond!(sumterm::MPISumTerm, M::MPS, b::Int, v::ITensor; kwargs...
   return spec
 end
 
-function orthogonalize!(sumterm::MPISumTerm, v::MPS, pos::Int; kwargs...)
-  if MPI.Comm_rank(comm(sumterm)) == 0
+function orthogonalize!(sumterm, v::MPS, pos::Int; kwargs...)
+  if 0 == 0
     v = orthogonalize!(v, pos; kwargs...)
   end
-  return bcast(v, 0, comm(sumterm))
+  return psi_bcast(v, 0, comm(sumterm))
 end
 
 function position!(sumterm::MPISumTerm, v::MPS, pos::Int)
@@ -69,3 +69,9 @@ function noiseterm(sumterm::MPISumTerm, v::ITensor, dir::String)
   # Should the noiseterm instead be calculated on the reduced `sumterm(v)` and then broadcasted?
   return allreduce(noiseterm(term(sumterm), v, dir), +, comm(sumterm))
 end
+
+
+if !isortho(psi) || orthoCenter(psi) != 1
+  orthogonalize!(psi, 1)
+end
+@assert isortho(psi) && orthoCenter(psi) == 1

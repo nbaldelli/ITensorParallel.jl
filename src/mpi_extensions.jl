@@ -25,6 +25,28 @@ function gather(obj, root::Integer, comm::MPI.Comm)
   return objs
 end
 
+function psi_bcast(psi0::MPS, splits, root::Integer, comm)
+  @assert isinteger(length(psi0)/splits)
+  step = Int(length(psi0)/splits)
+
+  isroot = MPI.Comm_rank(comm) == root
+  bc_data = Vector{Vector{ITensor}}(undef, splits)
+  ortholims = MPI.bcast(ortho_lims(psi0), root, comm)
+
+  for i in 1:splits
+      bc_data[i] = MPI.bcast(psi0[(i-1)*step+1:i*step], root, comm)
+  end
+  if !isroot
+      psi0 = nothing
+      psi0 = MPS([(bc_data...)...]; ortho_lims = ortholims)
+  end
+  return psi0
+end
+
+function psi_bcast(psi0::MPS, root::Integer, comm)
+  return psi_bcast(psi0, length(psi0), root, comm)
+end
+
 function bcast(obj, root::Integer, comm::MPI.Comm)
   isroot = MPI.Comm_rank(comm) == root
   count = Ref{Clong}()
